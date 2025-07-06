@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Word Test</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Using a common font for better look and feel */
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10 and IE 11 */
+            user-select: none; /* Standard syntax */
+        }
+        /* Custom class for the main word display for size and transition */
+        #word-display {
+            font-size: 8rem;
+            font-weight: 700;
+            transition: color 0.2s ease-in-out;
+        }
+        /* Responsive font size adjustments */
+        @media (max-width: 768px) {
+            #word-display {
+                font-size: 6rem;
+            }
+        }
+        @media (max-width: 480px) {
+            #word-display {
+                font-size: 4rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Main container for the game -->
+    <div id="game-container" class="text-center flex-grow flex flex-col items-center justify-center w-full">
+        <p id="instruction-text" class="text-gray-500 mb-4">Press the spacebar to start.</p>
+        <!-- The word will be displayed here -->
+        <div id="word-display" class="select-none">
+            <!-- Word will be injected by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Instructions, Scoreboard, and Stats at the bottom -->
+    <div class="w-full max-w-4xl p-4 bg-white rounded-lg shadow-md mt-8">
+        <div class="flex flex-wrap justify-around items-start text-lg gap-6">
+             <!-- Left Arrow Key Instruction -->
+            <div class="text-center">
+                <div class="font-bold text-red-500">Incorrect</div>
+                <div class="text-gray-500 text-sm">&larr; Left Arrow</div>
+            </div>
+            <!-- Score Tally -->
+            <div id="score" class="text-center">
+                <div class="font-bold">Score</div>
+                <div class="text-sm">
+                    <span id="correct-count" class="text-green-600 font-semibold">0</span> Correct |
+                    <span id="incorrect-count" class="text-red-600 font-semibold">0</span> Incorrect
+                </div>
+            </div>
+             <!-- Right Arrow Key Instruction -->
+            <div class="text-center">
+                <div class="font-bold text-green-500">Correct</div>
+                <div class="text-gray-500 text-sm">Right Arrow &rarr;</div>
+            </div>
+             <!-- Response Time Statistics -->
+            <div id="stats" class="text-center text-sm text-gray-700 w-full md:w-auto mt-4 md:mt-0 md:border-l md:pl-6">
+                 <div class="font-bold mb-1">Response Time Stats</div>
+                 <div class="text-left space-y-1">
+                    <p>Total Time: <span id="total-time" class="font-semibold">N/A</span></p>
+                    <p>Avg Correct: <span id="avg-correct" class="font-semibold">N/A</span></p>
+                    <p>SD Correct: <span id="sd-correct" class="font-semibold">N/A</span></p>
+                    <p>Avg Incorrect: <span id="avg-incorrect" class="font-semibold">N/A</span></p>
+                    <p>SD Incorrect: <span id="sd-incorrect" class="font-semibold">N/A</span></p>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const wordDisplay = document.getElementById('word-display');
+        const instructionText = document.getElementById('instruction-text');
+        const correctCountEl = document.getElementById('correct-count');
+        const incorrectCountEl = document.getElementById('incorrect-count');
+        const totalTimeEl = document.getElementById('total-time');
+        const avgCorrectEl = document.getElementById('avg-correct');
+        const sdCorrectEl = document.getElementById('sd-correct');
+        const avgIncorrectEl = document.getElementById('avg-incorrect');
+        const sdIncorrectEl = document.getElementById('sd-incorrect');
+
+        // --- Game State ---
+        let gameStarted = false;
+        let correctCount = 0;
+        let incorrectCount = 0;
+        let wordDisplayTime = 0; // Time when the current word was displayed
+        let totalStartTime = 0; // Time when the game started (spacebar press)
+        let correctResponseTimes = [];
+        let incorrectResponseTimes = [];
+
+        // --- Color and Word Data ---
+        const colors = [
+            { name: 'Red', hex: '#DC2626' },
+            { name: 'Green', hex: '#16A34A' },
+            { name: 'Blue', hex: '#2563EB' },
+            { name: 'Yellow', hex: '#CA8A04' },
+            { name: 'Purple', hex: '#7C3AED' },
+            { name: 'Orange', hex: '#EA580C' },
+            { name: 'Black', hex: '#000000' }
+        ];
+
+        /**
+         * Sets the initial state of the game before it starts.
+         */
+        function initializeGame() {
+            wordDisplay.textContent = 'Ready?';
+            wordDisplay.style.color = '#6B7280'; // A neutral gray color
+        }
+
+        /**
+         * Starts the game, hiding the initial message and showing the first word.
+         */
+        function startGame() {
+            gameStarted = true;
+            totalStartTime = Date.now();
+            instructionText.textContent = 'Press the arrow keys to score the response.';
+            updateStatsDisplay(); // To show 0s for total time
+            generateNewWord();
+        }
+
+        /**
+         * Generates and displays a new word with a random color.
+         */
+        function generateNewWord() {
+            let wordIndex = Math.floor(Math.random() * colors.length);
+            let colorIndex = wordIndex;
+
+            while (colorIndex === wordIndex) {
+                colorIndex = Math.floor(Math.random() * colors.length);
+            }
+
+            const wordText = colors[wordIndex].name;
+            const wordColor = colors[colorIndex].hex;
+
+            wordDisplay.textContent = wordText;
+            wordDisplay.style.color = wordColor;
+            
+            wordDisplayTime = Date.now();
+        }
+
+        /**
+         * Updates the score display on the page.
+         */
+        function updateScoreDisplay() {
+            correctCountEl.textContent = correctCount;
+            incorrectCountEl.textContent = incorrectCount;
+        }
+
+        /**
+         * Calculates statistics (average and standard deviation).
+         */
+        function calculateStats(timesArray) {
+            const n = timesArray.length;
+            if (n === 0) return { average: 0, stdDev: 0 };
+            const sum = timesArray.reduce((a, b) => a + b, 0);
+            const average = sum / n;
+            if (n < 2) return { average, stdDev: 0 };
+            const variance = timesArray.reduce((a, b) => a + Math.pow(b - average, 2), 0) / n;
+            return { average, stdDev: Math.sqrt(variance) };
+        }
+
+        /**
+         * Updates all statistics displays on the page.
+         */
+        function updateStatsDisplay() {
+            // Update total time
+            if (gameStarted) {
+                const elapsedSeconds = (Date.now() - totalStartTime) / 1000;
+                totalTimeEl.textContent = `${elapsedSeconds.toFixed(1)} s`;
+            } else {
+                 totalTimeEl.textContent = 'N/A';
+            }
+
+            // Update response time stats
+            const correctStats = calculateStats(correctResponseTimes);
+            const incorrectStats = calculateStats(incorrectResponseTimes);
+
+            avgCorrectEl.textContent = correctResponseTimes.length > 0 ? `${correctStats.average.toFixed(0)} ms` : 'N/A';
+            sdCorrectEl.textContent = correctResponseTimes.length > 1 ? `${correctStats.stdDev.toFixed(0)} ms` : 'N/A';
+            
+            avgIncorrectEl.textContent = incorrectResponseTimes.length > 0 ? `${incorrectStats.average.toFixed(0)} ms` : 'N/A';
+            sdIncorrectEl.textContent = incorrectResponseTimes.length > 1 ? `${incorrectStats.stdDev.toFixed(0)} ms` : 'N/A';
+        }
+
+        /**
+         * Handles all keydown events.
+         */
+        function handleKeyPress(event) {
+            // --- Game Start Logic ---
+            if (!gameStarted) {
+                if (event.code === 'Space') {
+                    startGame();
+                }
+                return; // Ignore other keys if the game hasn't started
+            }
+
+            // --- Scoring Logic ---
+            if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') {
+                return; // Do nothing if it's not a relevant key
+            }
+
+            const responseTime = Date.now() - wordDisplayTime;
+
+            if (event.key === 'ArrowRight') {
+                correctCount++;
+                correctResponseTimes.push(responseTime);
+            } else if (event.key === 'ArrowLeft') {
+                incorrectCount++;
+                incorrectResponseTimes.push(responseTime);
+            }
+            
+            updateScoreDisplay();
+            updateStatsDisplay();
+            generateNewWord();
+        }
+
+        // --- Event Listeners ---
+        document.addEventListener('keydown', handleKeyPress);
+
+        // --- Initialization ---
+        window.onload = () => {
+            initializeGame();
+            updateScoreDisplay();
+            updateStatsDisplay();
+        };
+    </script>
+</body>
+</html>
